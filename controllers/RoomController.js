@@ -59,7 +59,7 @@ const bookRoom = (req, res) => {
     const room = rooms.find(room => room.id === roomId);
 
     //If the room was available
-    if (room !== -1) {
+    if (room) {
 
         //If the room was available we need to check if the customer was available
         const customer = customers.findIndex(customer => customer.id === customerId);
@@ -152,17 +152,21 @@ const allRooms = (_, res) => {
     let allRoomsWithBookings = [];
 
     for (let i = 0; i < rooms.length; i++) {
-        let isFound = false;
+        let bookingsPerRoom = [];
         for (let j = 0; j < bookings.length; j++) {
             if (rooms[i].id === bookings[j].roomId) {
-                isFound = true;
-                allRoomsWithBookings = [...allRoomsWithBookings, { ...rooms[i], booking_details: bookings[j], customer_details: customers.find(customer => customer.id === bookings[j].customerId) }];
-                break;
+                let customer = customers.find(customer => customer.id === bookings[j].customerId);
+                let booking = bookings[j];
+
+                // Remove roomId and customerId from the combined object
+                let { roomId, customerId, ...restOfBooking } = booking;
+                let { ...restOfCustomer } = customer;
+
+                bookingsPerRoom = [...bookingsPerRoom, { ...restOfCustomer, ...restOfBooking }];
+
             }
         }
-        if (!isFound) {
-            allRoomsWithBookings = [...allRoomsWithBookings, { ...rooms[i], booking_details: 'Not yet booked!' }];
-        }
+        allRoomsWithBookings = [...allRoomsWithBookings, { ...rooms[i], booking_and_customer_details: bookingsPerRoom }];
     }
 
     res.status(200).json({
@@ -195,21 +199,48 @@ const roomById = (req, res) => {
     }
 
     //Bookings data with room
-    const bookingDetails = bookings.find(booking => booking.id === room.id);
+    const bookingDetails = bookings.filter(booking => booking.roomId === room.id);
 
-    const roomWithBookings = {
-        ...room,
-        booking_details: !bookingDetails ? "Not yet booked" : bookingDetails,
-        ...(bookingDetails && { customer_details: customers.find(customer => customer.id === bookingDetails.customerId) })
+    if(bookingDetails.length > 0) {
+        let roomWithAllBookings = {}
+        let bookingsPerRoom = [];
+        for (let i = 0; i < bookingDetails.length; i++) {
+            for (let j = 0; j < customers.length; j++) {
+                if (bookingDetails[i].customerId === customers[j].id) {
+                    let booking = bookings[i];
+    
+                    // Remove roomId and customerId from the combined object
+                    let { roomId, customerId, ...restOfBooking } = booking;
+                    let { ...restOfCustomer } = customers[j];
+    
+                    bookingsPerRoom = [...bookingsPerRoom, { ...restOfCustomer, ...restOfBooking }];
+    
+                }
+            }
+            roomWithAllBookings = { ...room, booking_and_customer_details: bookingsPerRoom }
+        }
+        res.status(200).json({
+            status: "Success",
+            message: `Room ${room.roomName} fetched successfully!`,
+            data: {
+                room: roomWithAllBookings
+            }
+        })
     }
 
-    res.status(200).json({
-        status: "Success",
-        message: `Room ${room.roomName} fetched successfully!`,
-        data: {
-            room: roomWithBookings
-        }
-    })
+    else {
+        res.status(200).json({
+            status: "Success",
+            message: `Room ${room.roomName} fetched successfully!`,
+            data: {
+                room: {...room, booking_and_customer_details: "Not yet booked!"}
+            }
+        })
+    }
+    
+
+
+    
 }
 
 
