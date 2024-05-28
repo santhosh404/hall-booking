@@ -18,9 +18,11 @@ app.use(express.json());
 
 //Routers
 app.use('/api/v1/room', RoomRouter);
-app.use('/api/v1/customer', CustomerRouter)
+app.use('/api/v1/customer', CustomerRouter);
+
+const PORT = process.env.PORT || 5000
 
 //Listening the server
-app.listen(process.env.PORT, () => {
-    console.log(`Server is up and running at ${process.env.PORT}`)
+app.listen(PORT, () => {
+    console.log(`Server is up and running at ${PORT}`)
 })
